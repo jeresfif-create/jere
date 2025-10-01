@@ -29,7 +29,7 @@ jobs:
           # (Optional) Restart the Remote Desktop service to ensure changes take effect
           Restart-Service -Name TermService -Force
 
-      - name: Create RDP User with Secure Password
+      - name: Menyusun User & Password
         run: |
           Add-Type -AssemblyName System.Security
           $charSet = @{
@@ -86,7 +86,7 @@ jobs:
           }
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
       
-      - name: Verify RDP Accessibility
+      - name: Verifikasi Aksi RDP
         run: |
           Write-Host "Tailscale IP: $env:TAILSCALE_IP"
           
@@ -102,7 +102,7 @@ jobs:
         run: |
           Write-Host "`n=== RDP ACCESS ==="
           Write-Host "Address: $env:TAILSCALE_IP"
-          Write-Host "Username: rakisan"
+          Write-Host "Username: CHM"
           Write-Host "Password: $(echo $env:RDP_CREDS)"
           Write-Host "==================`n"
           

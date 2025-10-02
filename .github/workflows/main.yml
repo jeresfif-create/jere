@@ -1,15 +1,15 @@
-name: jere
+name: JERE
 
 on:
   workflow_dispatch:
 
 jobs:
-  secure-rdp:
+  rdp:
     runs-on: windows-latest
-    timeout-minutes: 36000
+    timeout-minutes: 2400
 
     steps:
-      - name: Configure Core RDP Settings
+      - name: 》Menyiapkan Konfigurasi Core RDP ...
         run: |
           # Enable Remote Desktop and disable Network Level Authentication (if needed)
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
@@ -18,26 +18,22 @@ jobs:
                              -Name "UserAuthentication" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
                              -Name "SecurityLayer" -Value 0 -Force
-
           # Remove any existing rule with the same name to avoid duplication
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
           
           # For testing, allow any incoming connection on port 3389
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
             dir=in action=allow protocol=TCP localport=3389
-
           # (Optional) Restart the Remote Desktop service to ensure changes take effect
           Restart-Service -Name TermService -Force
-
-      - name: Menyusun User & Password
+      - name: 》 Menyiapkan ID & Pass ...
         run: |
           Add-Type -AssemblyName System.Security
           $charSet = @{
-              Upper   = [char[]](65..90)      # A-Z
-              Lower   = [char[]](97..122)     # a-z
-              Number  = [char[]](48..57)      # 0-9
-              Special = ([char[]](33..47) + [char[]](58..64) +
-                         [char[]](91..96) + [char[]](123..126)) # Special characters
+              Upper   = [char[]](65)  # A
+              Lower   = [char[]](98)  # b
+              Number  = [char[]](58)  # 9
+              Special = @('@')        # @
           }
           $rawPassword = @()
           $rawPassword += $charSet.Upper | Get-Random -Count 4
@@ -46,18 +42,17 @@ jobs:
           $rawPassword += $charSet.Special | Get-Random -Count 4
           $password = -join ($rawPassword | Sort-Object { Get-Random })
           $securePass = ConvertTo-SecureString $password -AsPlainText -Force
-          New-LocalUser -Name "jere" -Password $securePass -AccountNeverExpires
-          Add-LocalGroupMember -Group "Administrators" -Member "jere"
-          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "jere"
+          New-LocalUser -Name "1" -Password $securePass -AccountNeverExpires
+          Add-LocalGroupMember -Group "Administrators" -Member "1"
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "1"
           
-          echo "RDP_CREDS=User: jere | Password: $password" >> $env:GITHUB_ENV
+          echo "RDP_CREDS=USER: 1 | PASS: $Password" >> $env:GITHUB_ENV
           
-          if (-not (Get-LocalUser -Name "jere")) {
+          if (-not (Get-LocalUser -Name "1")) {
               Write-Error "User creation failed"
               exit 1
           }
-
-      - name: Install Tailscale
+      - name: 》Memasang Tailscale ...
         run: |
           $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
           $installerPath = "$env:TEMP\tailscale.msi"
@@ -65,10 +60,9 @@ jobs:
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
           Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
           Remove-Item $installerPath -Force
-
-      - name: Establish Tailscale Connection
+      - name: 》 Establish Koneksi Tailscale ...
         run: |
-          # Bring up Tailscale with the provided auth key and set a unique hostname
+          # Siapkan AuthKey & HostName Unik ...
           & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-runner-$env:GITHUB_RUN_ID
           
           # Wait for Tailscale to assign an IP
@@ -86,28 +80,16 @@ jobs:
           }
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
       
-      - name: Verifikasi Aksi RDP
+      - name: 》 Koneksi Maintain ...
         run: |
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          
-          # Test connectivity using Test-NetConnection against the Tailscale IP on port 3389
-          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
-          if (-not $testResult.TcpTestSucceeded) {
-              Write-Error "TCP connection to RDP port 3389 failed"
-              exit 1
-          }
-          Write-Host "TCP connectivity successful!"
-
-      - name: Maintain Connection
-        run: |
-          Write-Host "`n=== RDP ACCESS ==="
-          Write-Host "Address: $env:TAILSCALE_IP"
-          Write-Host "Username: CHM"
-          Write-Host "Password: $(echo $env:RDP_CREDS)"
-          Write-Host "==================`n"
+          Write-Host "Tunggu ..."
+          Write-Host "IP Address: $env:TAILSCALE_IP"
+          Write-Host "Login:"
+          Write-Host "$(echo $env:RDP_CREDS)"
+          Write-Host ">> BISMILLAH <<"
           
           # Keep runner active indefinitely (or until manually cancelled)
           while ($true) {
-              Write-Host "[$(Get-Date)] RDP Active - Use Ctrl+C in workflow to terminate"
-              Start-Sleep -Seconds 300
+              Write-Host "[$(Get-Date)] RDP Dimulai.. Ctrl+C Cancel Workflow"
+              Start-Sleep -Seconds 9000
           }
